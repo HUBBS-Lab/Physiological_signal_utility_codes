@@ -9,7 +9,7 @@
 # =============================================================================
 
 import biosppy
-from biosppy import storage
+# from biosppy import storage
 from biosppy.signals import ecg
 import numpy as np
 import pyhrv.tools as tools
@@ -18,7 +18,7 @@ import pandas as pd
 import os
 
 
-def extract_ecg_feature(ecg_data, ecg_time, seg_size):
+def extract_ecg_feature(ecg_data, ecg_time, fs, seg_size):
     """This function takes the ecg file from verbio data and calculates the time 
     domain and frequency domain features for each segment
     
@@ -26,6 +26,7 @@ def extract_ecg_feature(ecg_data, ecg_time, seg_size):
     Args:
         ecg_data : numpy array of ecg data
         ecg_time : numpy array of corresponding timestamps
+        fs       : Sampling rate of ECG signal (in Hz)
         seg_size : Feature semgment length in seconds. If 0, it calculates feature for whole session.
                    If negative, it will raise an exception
 
@@ -52,12 +53,23 @@ def extract_ecg_feature(ecg_data, ecg_time, seg_size):
                 
             end_idx = np.where(ecg_time<=timestamp)[0][-1] + 1
             
-            seg_data = ecg_signal[start_idx:end_idx]
+            seg_data = ecg_data[start_idx:end_idx]
             
-            signal, rpeaks = biosppy.signals.ecg.ecg(seg_data,sampling_rate=512, show=False)[1:3]  #### Denoising and R-R peak detection
+            signal, rpeaks = biosppy.signals.ecg.ecg(seg_data,sampling_rate=fs, show=False)[1:3]  #### Denoising and R-R peak detection
     
         
-            nni = tools.nn_intervals(rpeaks) #### NN-interval calculation
+            nni = tools.nn_intervals(rpeaks) #### This gives sample index, not timestampl
+            
+            rr = ecg_time[rpeaks]*1000   ##### sample number to timestamp (ms) conversion
+            rri = tools.nn_intervals(rr)
+
+
+            rri=hrvanalysis.preprocessing.remove_outliers(rr_intervals = rri)
+
+            rri = hrvanalysis.preprocessing.interpolate_nan_values(rr_intervals=rri)
+            nn_intervals_list = hrvanalysis.preprocessing.remove_ectopic_beats(rr_intervals=rri, method="malik")
+            nni = hrvanalysis.preprocessing.interpolate_nan_values(rr_intervals=nn_intervals_list)
+
             
             TDF = hrvanalysis.get_time_domain_features(nni)  
             FDF = hrvanalysis.get_frequency_domain_features(nni)
@@ -74,8 +86,19 @@ def extract_ecg_feature(ecg_data, ecg_time, seg_size):
             start_idx = end_idx
             
     elif seg_size == 0:
-        signal, rpeaks = biosppy.signals.ecg.ecg(ecg_signal,sampling_rate=512, show=False)[1:3]
-        nni = tools.nn_intervals(rpeaks)
+        signal, rpeaks = biosppy.signals.ecg.ecg(ecg_data,sampling_rate=fs, show=False)[1:3]
+        nni = tools.nn_intervals(rpeaks) #### This gives sample index, not timestamp
+        
+        rr = ecg_time[rpeaks]*1000   ##### sample number to timestamp (ms) conversion
+        rri = tools.nn_intervals(rr)
+
+
+        rri=hrvanalysis.preprocessing.remove_outliers(rr_intervals = rri)
+
+        rri = hrvanalysis.preprocessing.interpolate_nan_values(rr_intervals=rri)
+        nn_intervals_list = hrvanalysis.preprocessing.remove_ectopic_beats(rr_intervals=rri, method="malik")
+        nni = hrvanalysis.preprocessing.interpolate_nan_values(rr_intervals=nn_intervals_list)
+
             
         TDF = hrvanalysis.get_time_domain_features(nni)
         FDF = hrvanalysis.get_frequency_domain_features(nni)
@@ -153,7 +176,7 @@ hr_fid = f'{data_dir}/HR.xlsx'
 ecg_fs = 512     #### Check from actiwave device manual
 hr_fs = 1       
 
-seg_size = 20 ### For very small segment size, time dormain and freq domain features might not be available.
+seg_size = 30 ### For very small segment size, time dormain and freq domain features might not be available.
         
 
 ecg_df = pd.read_excel(ecg_fid)
@@ -175,5 +198,5 @@ except:
 
 
 #### Feature dataframes, which can be saved in excel/csv format
-TDF_df, FDF_df = extract_ecg_feature(ecg_signal, ecg_time, seg_size)
+TDF_df, FDF_df = extract_ecg_feature(ecg_signal, ecg_time, ecg_fs, seg_size)
 meanHR_df = mean_hr(hr_signal, hr_time, seg_size)

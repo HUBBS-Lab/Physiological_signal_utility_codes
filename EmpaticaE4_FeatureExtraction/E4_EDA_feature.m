@@ -16,8 +16,8 @@ function [scl_arr, scramp_arr, scrfreq_arr] = E4_EDA_feature(eda, fs, seg_size, 
 
 
 %   Time is calculated manually for if the EDA data has no timestamp  
-    if eda.Properties.VariableNames{1} == "Time_s_"    %%%% MATLAB recognizes the parenthesis as _ in 'Time (s)'
-        time = eda.('Time_s_');
+    if eda.Properties.VariableNames{1} == "Time"    %%%% MATLAB recognizes the parenthesis as _ in 'Time (s)'
+        time = eda.('Time');
     else
         time = 0:1/fs:(height(eda)-1)/fs;
     end
