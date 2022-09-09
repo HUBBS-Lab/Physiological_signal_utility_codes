@@ -5,4 +5,6 @@ function. Simple mean value is calculated for them. These codes can calculate fe
 segments with given size (set a positive value for seg_size). A usage example is shown in sample_main.m file. Please read the comments in 
 the three mentioned files. Others are utility functions.
 
-Note: copy ConvertToLedalabTextInput.m into the ledalab directory.
+Note: 
+1. copy ConvertToLedalabTextInput.m into the ledalab-349 directory.
+2. create a folder named ledalabtempfiles within ledalab-349 directory.
